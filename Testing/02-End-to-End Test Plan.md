@@ -68,8 +68,8 @@ Every key specification from [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-
 | 4 | Power factor | ≥0.99 at full load | RTM-04 | DVT, EVT | §3.1 |
 | 5 | THDi | ≤5% at full load | RTM-05 | DVT, EVT | §3.1 |
 | 6 | Rated output power | 30 kW (constant power) | RTM-06 | DVT, EVT | §3.1 |
-| 7 | Output voltage range | 150–650 VDC | RTM-07 | DVT, EVT | §3.1, §7 |
-| 8 | Output current range | 0–100 A | RTM-08 | DVT, EVT | §3.1, §7 |
+| 7 | Output voltage range | 150–900 VDC | RTM-07 | DVT, EVT | §3.1, §7 |
+| 8 | Output current range | 0–60 A (30 kW constant-power 500–900 V; current-limited below 500 V) | RTM-08 | DVT, EVT | §3.1, §7 |
 | 9 | Voltage accuracy | ±0.5% | RTM-09 | DVT | §3.1 |
 | 10 | Current accuracy | ±1% | RTM-10 | DVT | §3.1 |
 | 11 | Output ripple | <0.5% RMS | RTM-11 | DVT | §3.1 |
@@ -352,8 +352,8 @@ Simulate a standard CCS charging curve using an electronic load in CV/CC mode or
 | Phase | Test | Pass Criteria |
 |-------|------|---------------|
 | Handshake | Protocol handshake via CAN (simulated CHAdeMO controller) | Sequence completes within 5 s |
-| Current demand | Step I_out 0 → 50 A → 100 A | PDU tracks demand within ±1 A |
-| Voltage regulation | V_out at 200 V, 400 V, 650 V | Regulation ±0.5% |
+| Current demand | Step I_out 0 → 30 A → 60 A | PDU tracks demand within ±1 A |
+| Voltage regulation | V_out at 200 V, 500 V, 800 V (covers 400 V- and 800 V-class packs) | Regulation ±0.5% |
 | Session termination | Stop request from vehicle | Current ramps to 0; contactor opens |
 
 ### 7.3 Real Vehicle Test (If Available)
@@ -367,11 +367,11 @@ Simulate a standard CCS charging curve using an electronic load in CV/CC mode or
 
 | Test ID | Test | Condition | Pass Criteria |
 |---------|------|-----------|---------------|
-| EDGE-01 | Maximum voltage | V_out = 650 V, I_out = 46.2 A (30 kW) | Regulation ±0.5%; no OVP trip |
-| EDGE-02 | Maximum current | V_out = 300 V, I_out = 100 A | Regulation ±1%; no OCP trip |
-| EDGE-03 | Minimum voltage | V_out = 150 V, I_out = 100 A (15 kW) | Regulation ±1%; stable DC-DC operation |
+| EDGE-01 | Maximum voltage | V_out = 900 V, I_out = 33.3 A (30 kW) | Regulation ±0.5%; no OVP trip |
+| EDGE-02 | Maximum current | V_out = 500 V, I_out = 60 A (30 kW, edge of constant-power region) | Regulation ±1%; no OCP trip |
+| EDGE-03 | Minimum voltage | V_out = 150 V, I_out = 60 A (9 kW, current-limited region) | Regulation ±1%; stable DC-DC operation |
 | EDGE-04 | Minimum input voltage | 260 VAC, 30 kW | All specs met; PFC current ≤60 A/phase |
-| EDGE-05 | Maximum input voltage | 530 VAC, 30 kW | All specs met; DC bus ≤700 V |
+| EDGE-05 | Maximum input voltage | 530 VAC, 30 kW | All specs met; DC bus ~750 V (Rev 1.0 setpoint) |
 | EDGE-06 | Rapid start/stop cycling | 100 start/stop cycles, 30 s interval, 15 kW | No faults; NTC energy within rating; relay contacts OK |
 | EDGE-07 | Load rejection | 30 kW → 0 kW step (load disconnect) | V_out overshoot <5% of setpoint; OVP does not trip |
 | EDGE-08 | Load step | 0 → 30 kW step (CC mode) | Settling <500 ms; no undershoot below 90% of setpoint |
@@ -482,7 +482,7 @@ Reference the equipment list in [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Mic
 | 7 | EFT/Burst generator | Up to 4 kV, 5/50 ns pulse | IEC 61000-4-4 |
 | 8 | Vibration table | 5–500 Hz, 2g, 3-axis (or single-axis with repositioning) | Vibration and shock testing |
 | 9 | Sound level meter | Class 2, A-weighted, 30–130 dB | Acoustic noise measurement |
-| 10 | Battery simulator (optional) | 150–650 VDC, 100 A sink, programmable V/I curve | Realistic EV charging simulation |
+| 10 | Battery simulator (optional) | 150–900 VDC, 60 A sink, programmable V/I curve (covers 400 V- and 800 V-class EV packs) | Realistic EV charging simulation |
 | 11 | SECC / charger controller | ISO 15118 + OCPP 1.6 capable | Communication protocol validation |
 | 12 | CCS combo cable + connector | 750 V, 200 A rated | Vehicle interface testing |
 | 13 | CHAdeMO adapter (optional) | Standard CHAdeMO connector + protocol simulator | CHAdeMO protocol testing |

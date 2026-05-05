@@ -97,7 +97,7 @@ Apply power in a controlled sequence and verify basic operation per [[__Workspac
 | 3.6 | Query unit via CAN: firmware version | Matches expected | CAN tool |
 | 3.7 | Query unit via CAN: temperature readings | Ambient ±5°C; no sensor faults | CAN tool |
 | 3.8 | Query unit via CAN: DC bus voltage | ~0 V (PFC not yet enabled) or pre-charge voltage | CAN tool |
-| 3.9 | Enable PFC via CAN command | DC bus ramps to ~700 VDC within 6 s | CAN tool |
+| 3.9 | Enable PFC via CAN command | DC bus ramps to ~750 VDC within 6 s | CAN tool |
 | 3.10 | Monitor DC bus voltage for 60 s | Stable within ±5 V; no oscillation | CAN tool |
 | 3.11 | Verify PFC input current (CAN or clamp) | Small magnetizing current only (no load) | CAN / clamp |
 | 3.12 | Disable PFC; verify DC bus discharge | Bus discharges through bleed resistors; <50 V in 60 s | CAN tool |

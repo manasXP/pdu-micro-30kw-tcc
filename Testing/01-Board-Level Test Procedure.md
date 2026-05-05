@@ -104,7 +104,7 @@ status: approved (Rev 1.0 banner; full test-script refresh pending DCDC-02 board
 | 39 | 24V DC bus harness (P6) | Molex Micro-Fit 3.0, daisy-chain, WDR-120-24 → PFC / DC-DC / Controller | 1 |
 | 40 | ~~Power harness P5~~ | *(Eliminated — 24V bus replaced dedicated Aux PSU outputs)* | — |
 | 41 | Fuses (AC input) | 80 A, 600 VAC, fast-blow (one per phase) | 3 |
-| 42 | Fuse (DC output) | 125 A, 700 VDC, fast-blow | 1 |
+| 42 | Fuse (DC output) | 80 A, 1000 VDC, fast-blow (Rev 1.0: rated above 900 V output ceiling) | 1 |
 | 43 | E-stop mushroom button | Wired to disconnect AC source enable + load enable | 1 |
 | 44 | PPE kit | HV-rated gloves (Class 0, 1000 V), safety glasses, insulating mat | 1 set |
 | 45 | Discharge probe | 10 kΩ, 50 W, insulated handles, rated 1200 V | 1 |
@@ -238,7 +238,7 @@ status: approved (Rev 1.0 banner; full test-script refresh pending DCDC-02 board
                      │        DC-DC BOARD (DUT)             │
                      │                                      │
   HV DC Supply  ────▶│ P2 (DC_BUS+, DC_BUS−)                │
-  (0–700 VDC)        │  via bus bar + fuse                  │
+  (0–750 VDC)        │  via bus bar + fuse                  │
   or DC load on      │                                      │
   AC-Entry output    │ Gate Drive Supply (+18V/−5V) ◀────── On-board QA2403C-R3S
                      │  P6 (24V DC input)                   │  (from 24V bus)
@@ -249,13 +249,13 @@ status: approved (Rev 1.0 banner; full test-script refresh pending DCDC-02 board
                      │                                      │
                      │ DC Output (P3a) ─────────────────▶  DC Electronic
                      │  DC_PRE_CONT+ / DC_PRE_CONT−         │  Load (main)
-                     │  (150–650 VDC, 100A max)             │  800V / 100A
+                     │  (150–900 VDC, 60A max)              │  1000V / 60A
                      │                                      │
   Power Analyzer ───▶│ DC input + DC output                 │
-  Oscilloscope ─────▶│ Ch1: V_DS primary half-bridge (HV)   │
+  Oscilloscope ─────▶│ Ch1: V_DS primary H-bridge (HV)      │
                      │ Ch2: I_inductor (Rogowski)           │
                      │ Ch3: V_out DC (HV diff probe)        │
-                     │ Ch4: Diode cathode voltage (HV)      │
+                     │ Ch4: V_DS secondary H-bridge (HV)    │
   Thermal Camera ───▶│ MOSFETs / diodes / transformer       │
                      └──────────────────────────────────────┘
 ```
@@ -394,7 +394,7 @@ Reference: [[__Workspaces/PDU-ST/docs/07-PCB-Layout/AC-Entry/__init|AC-Entry Boa
 Reference: [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/components/Common/07-Total Component Cost|Total Component Cost]] (distributed power modules section)
 
 > [!note] Architecture change
-> The former AUX-PSU-02 board (custom flyback from 700 VDC bus) has been replaced by a Meanwell WDR-120-24 DIN-rail PSU feeding a 24V DC bus, with per-board isolated DC-DC modules generating local rails: PFC board (QA2403C-R3S: +18V/−5V), DC-DC board (QA2403C-R3S: +18V/−5V), Controller board (+5V, +3.3V, +12V).
+> The former AUX-PSU-02 board (custom flyback from 700 VDC bus (Rev 0.x)) has been replaced by a Meanwell WDR-120-24 DIN-rail PSU feeding a 24V DC bus, with per-board isolated DC-DC modules generating local rails: PFC board (QA2403C-R3S: +18V/−5V), DC-DC board (QA2403C-R3S: +18V/−5V), Controller board (+5V, +3.3V, +12V).
 
 #### 3.2.1 Visual Inspection
 
@@ -490,7 +490,7 @@ Reference: [[__Workspaces/Energy/PDU/PDU-ST/docs/07-PCB-Layout/Controller/__init
 | CT-F01 | HS-PWM module initialization: configure PG1-PG8 clock source, verify 250 ps resolution | Firmware debug + oscilloscope on PG1 output | PWM clock active; 250 ps resolution achievable | ☐ P / ☐ F |
 | CT-F02 | Generate PFC PWM on PG1-PG3 (140 kHz, 50% duty, 200 ns dead-time). Measure all 6 outputs | Oscilloscope | Frequency ±1%, duty ±1%, dead-time 200 ±20 ns, 120° phase shift between PG1/PG2/PG3 | f: ___ kHz, DT: ___ ns |
 | CT-F03 | Generate DC-DC PWM on PG4-PG5: 2 half-bridge pairs (140 kHz, variable duty, 150 ns dead-time, complementary mode) | Oscilloscope | Frequency ±0.5%, duty as set ±0.5%, dead-time 150 ±10 ns | f: ___ kHz, DT: ___ ns |
-| CT-F04 | Sweep DC-DC duty cycle 0% → 50% by updating PGxDC register. Verify smooth transition, no glitches | Oscilloscope (single-shot capture during ramp) | No missing pulses, no overlap, smooth duty-cycle change | ☐ P / ☐ F |
+| CT-F04 | Sweep per-leg DC-DC phase-shift φ from 0° → 60° by updating PWM phase-shift register on dsPIC33CK leg slave (SPS modulation, PG1–PG4 driving primary + active-secondary H-bridges). Verify smooth transition, no glitches | Oscilloscope (single-shot capture during ramp) | No missing pulses, monotonic φ change, dead-time preserved on all 8 FETs | ☐ P / ☐ F |
 | CT-F05 | ADC self-calibration on master and slave core ADCs. Read bandgap reference voltage | Firmware + UART dump | Bandgap reads within ±15 mV of expected | ___ V |
 | CT-F06 | Apply 1.000 V DC to each analog input (P3 pins). Read ADC value | Bench supply + DMM + firmware | ADC reading within ±5 LSB of expected (1241 counts at 12-bit, 3.3V ref) | See report |
 | CT-F07 | CAN bus loopback: send frame from PCAN-USB #1, receive on MCU, echo back, verify on PCAN-USB #2 | PCAN-View software | Frame integrity: all 8 data bytes match, no CRC errors, latency <1 ms | ☐ P / ☐ F |
@@ -524,7 +524,7 @@ Reference: [[__Workspaces/PDU-ST/docs/07-PCB-Layout/AC-Entry/__init|AC-Entry Boa
 
 | Step | Action | Instrument | Pass Criteria | Record |
 |:----:|--------|-----------|---------------|--------|
-| AC-V01 | Inspect MSCSM120VR1M16CTPAG triple Vienna SiC module (62mm package) solder joints and mounting | 10× magnifier | Correct orientation, all power and signal pins soldered, mounting hardware torqued | ☐ P / ☐ F |
+| AC-V01 | Inspect discrete Vienna PFC SiC stage per MSCSICPFC/REF5 (DS50002952B): 6× 700 V mSiC MOSFETs + 12× 1200 V mSiC Schottky diodes — solder joints, orientation, and heatsink-mount torque | 10× magnifier | Correct orientation, all power and signal pins soldered, mounting hardware torqued | ☐ P / ☐ F |
 | AC-V02 | Inspect Microchip-compatible isolated gate driver ICs | 10× magnifier / microscope | No bridges, correct orientation, all pins wetted | ☐ P / ☐ F |
 | AC-V03 | Verify snubber capacitor values and placement (<5 mm from drain) | Visual + marking | 100 nF C0G 630V; 4–8 per MOSFET | ☐ P / ☐ F |
 | AC-V04 | Inspect EMI filter zone: CM choke, X-caps, Y-caps properly seated | Visual | No cracked ferrite, caps firmly soldered | ☐ P / ☐ F |
@@ -564,8 +564,8 @@ Reference: [[__Workspaces/PDU-ST/docs/07-PCB-Layout/AC-Entry/__init|AC-Entry Boa
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| AC-F01 | Full PFC regulation at 260 VAC, 15 kW (half load): V_bus regulated to 700 V, PF measured | Power analyzer 3P4W | V_bus = 700 V ±1%, PF ≥ 0.99, THDi ≤ 5% | V_bus: ___ V, PF: ___, THDi: ___% |
-| AC-F02 | Full PFC regulation at 530 VAC, 30 kW: V_bus = 700 V | Power analyzer | V_bus = 700 V ±1%, PF ≥ 0.99, THDi ≤ 5%, I_in ≤ 60 A/phase | V_bus: ___ V, PF: ___, I_in: ___ A |
+| AC-F01 | Full PFC regulation at 260 VAC, 15 kW (half load): V_bus regulated to 750 V, PF measured | Power analyzer 3P4W | V_bus = 750 V ±1%, PF ≥ 0.99, THDi ≤ 5% | V_bus: ___ V, PF: ___, THDi: ___% |
+| AC-F02 | Full PFC regulation at 530 VAC, 30 kW: V_bus = 750 V | Power analyzer | V_bus = 750 V ±1%, PF ≥ 0.99, THDi ≤ 5%, I_in ≤ 60 A/phase | V_bus: ___ V, PF: ___, I_in: ___ A |
 | AC-F03 | Phase balance: measure per-phase input current at 30 kW | Power analyzer | Phase currents balanced within ±3% | I_A: ___ A, I_B: ___ A, I_C: ___ A |
 | AC-F04 | Efficiency at 530 VAC / 30 kW | Power analyzer (P_in 3P4W, P_out DC) | η ≥ 98% (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/04-Thermal Budget]] §2.1: 98.7% target) | η = ___% |
 | AC-F05 | Neutral point balance: V_cap_top − V_cap_bot < 10 V at rated load | DMM or oscilloscope | ΔV < 10 V | ΔV: ___ V |
@@ -625,43 +625,43 @@ Reference: [[__Workspaces/PDU-ST/docs/07-PCB-Layout/DAB/__init|DC-DC Board]], [[
 |:----:|--------|----------------------|---------------|--------|
 | DC-P01 | Apply gate drive supply (+18V/−5V) to primary drivers. Measure quiescent current | Bench supply | Total ~40–60 mA for 2 drivers (primary full-bridge) | ___ mA |
 | DC-P02 | Verify UVLO on each driver: ramp +18V; gate output active only above ~13 V | Oscilloscope | UVLO threshold ≈ 13 V on both primary drivers | ☐ P / ☐ F |
-| DC-P03 | Apply 140 kHz PWM (variable duty, complementary mode) to each primary driver input. Verify gate swing +18V/−5V | Oscilloscope | Clean gate waveform, rise <50 ns, dead-time as set | ☐ P / ☐ F |
+| DC-P03 | Apply 100 kHz PWM (SPS phase-shift mode, complementary on each H-bridge with dead-time) to all 8 driver inputs per leg (PG1–PG4 → primary + active-secondary H-bridges). Verify gate swing +18 V/−5 V on each | Oscilloscope | Clean gate waveform, rise <50 ns, dead-time as set | ☐ P / ☐ F |
 
 #### 3.5.4 First Power-On (Low Voltage / Low Power)
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| DC-P05 | Apply 100 VDC to DC bus input (P2) via HV supply, 1A limit. Enable DC-DC at 0% duty cycle (zero power transfer). Verify no output voltage appears beyond diode rectification | Oscilloscope + DMM on output | V_out ≈ N × V_in (transformer turns ratio, unregulated); no arcing, no smoke | V_out: ___ V |
-| DC-P06 | Gradually increase duty cycle to verify regulated output voltage appears. Increase duty step-by-step and confirm V_out rises as expected | Oscilloscope + DMM | V_out increases smoothly with increasing duty cycle | ☐ P / ☐ F |
+| DC-P05 | Apply 100 VDC to DC bus input (P2) via HV supply, 1 A limit. Enable a single DAB leg at φ = 0° (zero power transfer). Verify no output voltage appears beyond static transformer feedthrough | Oscilloscope + DMM on output | V_out ≈ 0 V at φ = 0° (active-secondary holds output); no arcing, no smoke | V_out: ___ V |
+| DC-P06 | Gradually increase phase-shift φ on the leg under test from 0° → 30° to verify regulated output voltage appears. Step φ in 5° increments and confirm V_out rises per SPS power-transfer relation | Oscilloscope + DMM | V_out increases monotonically with φ; agrees with theoretical SPS curve within ±10 % | ☐ P / ☐ F |
 
 #### 3.5.5 Functional Tests
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| DC-F01 | DC-DC regulation at V_bus = 700 V, V_out = 400 V, 15 kW (half load) | Power analyzer (DC-DC) | V_out = 400 V ±0.5%, I_out within regulation | V_out: ___ V, I_out: ___ A |
-| DC-F02 | DC-DC regulation at V_bus = 700 V, V_out = 650 V, 30 kW (full rated) | Power analyzer | V_out = 650 V ±0.5%, I_out = 46.2 A, η measured | V_out: ___ V, η: ___% |
-| DC-F03 | DC-DC regulation at V_bus = 700 V, V_out = 150 V, 15 kW (100 A) — constant power point | Power analyzer | V_out = 150 V ±1%, I_out = 100 A | V_out: ___ V, I_out: ___ A |
-| DC-F04 | Efficiency at V_bus = 700 V, V_out = 400 V, 30 kW | Power analyzer | η ≥ 98% (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/04-Thermal Budget]] DC-DC target) | η: ___% |
-| DC-F05 | Primary MOSFET V_DS overshoot measurement: capture V_DS peak at turn-off at 700 V bus, 30 kW. Sample all 4 primary MOSFETs | Oscilloscope (HV probe, single-shot, full BW) | V_DS_peak ≤ 1100 V (margin to 1200 V rating) | V_DS_pk: ___ V |
-| DC-F06 | SiC Schottky diode forward voltage verification at rated current: measure V_F across each secondary diode at full load | Oscilloscope (HV diff probe across diode) | V_F = 1.2–1.8 V at rated current; matched within ±0.1 V across all diodes | V_F: ___ V |
-| DC-F07 | Switching waveform quality: capture V_DS and I_primary at 700 V bus, 30 kW, 140 kHz | Oscilloscope (HV probe + Rogowski) | Clean switching, no ringing >30% of V_bus, no double-pulsing | ☐ P / ☐ F |
+| DC-F01 | DC-DC regulation at V_bus = 750 V, V_out = 500 V, 15 kW (half load, all 3 legs at 5 kW with 120° phase distribution) | Power analyzer (DC-DC) | V_out = 500 V ±0.5%, per-leg current balanced ±5%, supervisor maintains 120° offset | V_out: ___ V, I_out: ___ A |
+| DC-F02 | DC-DC regulation at V_bus = 750 V, V_out = 800 V, 30 kW (full rated, 10 kW/leg) | Power analyzer | V_out = 800 V ±0.5%, I_out = 37.5 A, all 3 legs sharing within ±5%, η measured | V_out: ___ V, η: ___% |
+| DC-F03 | DC-DC regulation at V_bus = 750 V, V_out = 150 V, 9 kW (60 A) — current-limited region (constant-power 500–900 V; current-limited below 500 V) | Power analyzer | V_out = 150 V ±1%, I_out = 60 A | V_out: ___ V, I_out: ___ A |
+| DC-F04 | Efficiency at V_bus = 750 V, V_out = 800 V, 30 kW (constant-power region, 10 kW/leg) | Power analyzer | η ≥ 98% (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/04-Thermal Budget]] DC-DC target) | η: ___% |
+| DC-F05 | Primary MOSFET V_DS overshoot measurement: capture V_DS peak at turn-off at 750 V bus, 30 kW (10 kW/leg). Sample all 4 primary MOSFETs on each of the 3 legs | Oscilloscope (HV probe, single-shot, full BW) | V_DS_peak ≤ 1100 V (margin to 1200 V rating) | V_DS_pk: ___ V |
+| DC-F06 | Active-secondary V_DS verification at rated current: capture V_DS across each secondary MOSFET at full load (Rev 1.0 — DAB active-secondary replaces former Schottky-diode rectifier). | Oscilloscope (HV diff probe) | V_DS during conduction follows R_DS(on) × I; ZVS confirmed on turn-off across all 4 secondary FETs per leg | V_DS: ___ V |
+| DC-F07 | Switching waveform quality: capture V_DS and I_primary at 750 V bus, 30 kW (per leg @ 10 kW), 100 kHz nominal | Oscilloscope (HV probe + Rogowski) | Clean switching, no ringing >30% of V_bus, no double-pulsing; ZVS achieved within design φ range | ☐ P / ☐ F |
 
 #### 3.5.6 Protection Tests
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| DC-X01 | Output OVP (hardware): inject voltage above 715 V threshold on comparator test point | Oscilloscope on PGxFPCI fault input and PWM | All DC-DC PWM forced idle within <1 µs (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §2.1.2); latch-type, requires reset | Response: ___ µs |
+| DC-X01 | Output OVP (hardware): inject voltage above 950 V threshold on comparator test point (output OVP, slightly above 900 V max output) | Oscilloscope on PGxFPCI fault input and PWM | All DC-DC PWM forced idle within <1 µs (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §2.1.2); latch-type, requires reset | Response: ___ µs |
 | DC-X02 | Output OVP (software): increase V_out setpoint to 105% of target, verify trip | CAN log + oscilloscope | DC-DC PWM disabled within 100 µs, contactor opens 10 ms later | ☐ P / ☐ F |
-| DC-X03 | Output OCP (cycle-by-cycle): force output current above 110 A threshold | Electronic load CC mode at 112 A | Pulse skipping observed, output voltage droops, no hard fault | ☐ P / ☐ F |
-| DC-X04 | Output OCP (hardware): force current above 120 A | Electronic load | All DC-DC PWM latched off within <500 ns, auto-retry after 1 s (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §3.1.2) | Response: ___ ns |
-| DC-X05 | DESAT detection: inject V_DS > 8 V on one primary MOSFET DESAT pin (applies to all 4 primary switches) | External injection | Soft turn-off within <2 µs, fault latch asserts (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §3.4.2) | Response: ___ µs |
+| DC-X03 | Output OCP (cycle-by-cycle): force output current above 66 A threshold (10% above 60 A max) | Electronic load CC mode at 67 A | Pulse skipping observed, output voltage droops, no hard fault | ☐ P / ☐ F |
+| DC-X04 | Output OCP (hardware): force current above 72 A (20% above 60 A max) | Electronic load | All DC-DC PWM latched off within <500 ns, auto-retry after 1 s (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §3.1.2) | Response: ___ ns |
+| DC-X05 | DESAT detection: inject V_DS > 8 V on one primary MOSFET DESAT pin (applies across 24 FETs total — 8 per leg × 3 legs; spot-check all 4 primary on Leg A, then sample one each on Legs B and C, plus one secondary) | External injection | Soft turn-off within <2 µs, fault latch asserts (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/09-Protection and Safety]] §3.4.2) | Response: ___ µs |
 
 #### 3.5.7 Thermal Characterization
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| DC-T01 | 1-hour run at V_bus = 700 V, V_out = 400 V, 30 kW with production fans. Thermocouples on: primary MOSFET heatsink, secondary diode heatsink, transformer core, ambient | Thermocouple logger + thermal camera | Primary MOSFET HS <93°C, secondary diode HS <108°C, transformer <120°C per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/04-Thermal Budget]] §4.2 (adjust for lab ambient vs. 55°C spec) | See report |
-| DC-T02 | Thermal image: identify hot spots on output inductor, bus bars, diode heatsinks | Thermal camera | No unexpected component >130°C | ☐ P / ☐ F |
+| DC-T01 | 1-hour run at V_bus = 750 V, V_out = 800 V, 30 kW (10 kW/leg) with production fans. Thermocouples on: each leg's primary FB heatsink (3×), each leg's secondary FB heatsink (3×), each Payton main TX core (3×), ambient | Thermocouple logger + thermal camera | Primary FET HS <93°C, secondary FET HS <100°C (active-secondary, Rev 1.0), transformer <120°C per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/04-Thermal Budget]] §4.2 (adjust for lab ambient vs. 55°C spec) | See report |
+| DC-T02 | Thermal image: identify hot spots on output inductors, bus bars, secondary FB heatsinks (active-secondary, Rev 1.0) | Thermal camera | No unexpected component >130°C; per-leg thermal balance within ±5 °C | ☐ P / ☐ F |
 
 ---
 
@@ -671,11 +671,11 @@ Reference: [[__Workspaces/PDU-ST/docs/07-PCB-Layout/DAB/__init|DC-DC Board]], [[
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| SY-01 | Assemble all 4 boards on DUT plate with bus bars, harnesses, and fans. Double-check all connections | Visual inspection | All connectors seated, bus bar bolts torqued, harnesses keyed correctly | ☐ P / ☐ F |
-| SY-02 | Apply 260 VAC 3-phase, current-limited to 10 A. Observe full startup sequence | Oscilloscope (V_bus, V_out), CAN log | Sequence matches [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/08-Power-On Sequence and Inrush Management]] §5.2: NTC pre-charge → relay bypass → PFC soft-start → DC-DC soft-start (duty-cycle ramp) → contactor close | ☐ P / ☐ F |
+| SY-01 | Assemble all 3 boards (AC-Entry, PFC-02, DCDC-02) on DUT plate with bus bars, harnesses, and fans. Double-check all connections | Visual inspection | All connectors seated, bus bar bolts torqued, harnesses keyed correctly | ☐ P / ☐ F |
+| SY-02 | Apply 260 VAC 3-phase, current-limited to 10 A. Observe full startup sequence | Oscilloscope (V_bus, V_out), CAN log | Sequence matches [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/08-Power-On Sequence and Inrush Management]] §5.2: NTC pre-charge → relay bypass → PFC soft-start to 750 V → DC-DC soft-start (per-leg phase-shift φ ramp 0°→setpoint, sequential leg-A→B→C @ 100 ms intervals via supervisor) → contactor close | ☐ P / ☐ F |
 | SY-03 | Verify startup timing: T0 (AC on) to T6 (READY) | Oscilloscope + CAN timestamp | Total ≤6 s (per spec; T0→T2 ~3 s, T2→T3 ~0.2 s, T3→T4 ~0.8 s, T4→T5 ~1.5 s, T5→T6 ~0.2 s) | Total: ___ s |
 | SY-04 | Verify CAN status frame reports RUN state after startup | PCAN-USB + PCAN-View | Module state = RUN (0x01 status frame, per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/06-Firmware Architecture]] §6.2) | ☐ P / ☐ F |
-| SY-05 | Repeat SY-02/SY-03 at 530 VAC | Same | Same timing criteria; V_bus reaches ~710 V during pre-charge | Total: ___ s |
+| SY-05 | Repeat SY-02/SY-03 at 530 VAC | Same | Same timing criteria; V_bus reaches ~750 V during pre-charge (Rev 1.0 setpoint) | Total: ___ s |
 
 ### 4.2 Efficiency Sweep
 
@@ -700,9 +700,9 @@ Measure end-to-end efficiency (AC input to DC output, including all boards and h
 
 | Step | Action | Instrument / Settings | Pass Criteria | Record |
 |:----:|--------|----------------------|---------------|--------|
-| SY-10 | Set CC mode at 50 A, gradually increase load voltage from 150 → 650 V. Verify transition to CV at setpoint | Electronic load (CV mode ramp), oscilloscope on V_out + I_out | Smooth transition CC → CV, V_out overshoot <5% of setpoint, no oscillation | Overshoot: ___% |
-| SY-11 | Set CV mode at 650 V, gradually increase load current 0 → 50 A → 100 A. Verify transition to CC at 100 A | Electronic load (CC mode ramp), oscilloscope | Smooth transition CV → CC, I_out overshoot <5 A, settling <100 ms | Overshoot: ___ A |
-| SY-12 | Slew rate test: step V_out setpoint from 400 V to 650 V via CAN command. Measure rise time | CAN command + oscilloscope | Rise time 100–500 ms (controlled ramp, not step), no ring | Rise: ___ ms |
+| SY-10 | Set CC mode at 50 A, gradually increase load voltage from 150 → 900 V. Verify transition to CV at setpoint | Electronic load (CV mode ramp), oscilloscope on V_out + I_out | Smooth transition CC → CV, V_out overshoot <5% of setpoint, no oscillation | Overshoot: ___% |
+| SY-11 | Set CV mode at 800 V, gradually increase load current 0 → 30 A → 60 A. Verify transition to CC at 60 A | Electronic load (CC mode ramp), oscilloscope | Smooth transition CV → CC, I_out overshoot <3 A, settling <100 ms | Overshoot: ___ A |
+| SY-12 | Slew rate test: step V_out setpoint from 400 V to 800 V via CAN command. Measure rise time | CAN command + oscilloscope | Rise time 100–500 ms (controlled ramp, not step), no ring | Rise: ___ ms |
 
 ### 4.4 Protection Coordination
 
@@ -805,7 +805,7 @@ Before touching any board or conductor after power-off:
 6. **Only then** handle boards, change connections, or attach probes
 
 > [!warning] Stored Energy
-> DC bus capacitors store up to **42 J at 700 V** (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/08-Power-On Sequence and Inrush Management]] §1.2). This is sufficient to cause severe burns and cardiac arrest. Never assume capacitors are discharged — always measure first.
+> DC bus capacitors store up to **~48 J at 750 V** (Rev 1.0) (per [[__Workspaces/Energy/PDU/PDU-Micro-30KW/PDU-Micro-30KW-Spec/docs/Common/08-Power-On Sequence and Inrush Management]] §1.2). This is sufficient to cause severe burns and cardiac arrest. Never assume capacitors are discharged — always measure first.
 
 ### 6.2 PPE Requirements
 
