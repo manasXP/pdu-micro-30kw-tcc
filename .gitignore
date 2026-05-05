@@ -1,0 +1,16 @@
+# Obsidian
+.obsidian/
+
+# macOS
+.DS_Store
+._*
+
+# Editor
+*~
+*.tmp
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+.venv/
